@@ -82,9 +82,10 @@ const Chat = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingButton, setLoadingButton] = useState(false);
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [typing, setTyping] = useState(false);
+  const [inputShrink, setInputShrink] = useState(false);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -103,10 +104,11 @@ const Chat = () => {
   const sendMessage = async () => {
     if (!currentMessage) return;
 
+    setInputShrink(true);
     const newMessages = [...messages, { sender: "You", text: currentMessage }];
     setMessages(newMessages);
     setCurrentMessage("");
-    setTyping(true);
+    setLoadingButton(true);
 
     try {
       const response = await fetch('https://us-central1-gemini-chat-14f5d.cloudfunctions.net/geminiChat', {
@@ -118,14 +120,16 @@ const Chat = () => {
       });
 
       const data = await response.json();
+      console.log('Response from AI:', data.response); // Verifica la respuesta en la consola
       const aiMessage = data.response;
 
+      // Añade la respuesta completa de la IA sin mecanografía
       setMessages(prevMessages => [...prevMessages, { sender: 'AI', text: aiMessage }]);
-      setTyping(false);
     } catch (error) {
       console.error('Error:', error);
       setMessages([...newMessages, { sender: 'AI', text: 'Sorry, something went wrong.' }]);
-      setTyping(false);
+    } finally {
+      setLoadingButton(false);
     }
   };
 
@@ -228,7 +232,7 @@ const Chat = () => {
                 >
                   <AccountCircleIcon />
                 </ListItemIcon>
-                <ListItemText primary="User name" sx={{ color: "white", fontSize: "0.875rem" }} />
+                <ListItemText primary="User name" sx={{ color: "white" }} />
               </ListItemButton>
               <ListItemButton
                 href="/"
@@ -299,52 +303,79 @@ const Chat = () => {
                 borderRadius: "0.5rem",
                 display: "flex",
                 flexDirection: "column",
-                alignItems: "flex-start",
+                justifyContent: "flex-end",
               }}
             >
               {messages.map((message, index) => (
                 <div
                   key={index}
+                  className={`message ${message.sender.toLowerCase()}`}
                   style={{
-                    marginBottom: "0.5rem",
-                    alignSelf: message.sender === "You" ? "flex-end" : "flex-start",
-                    backgroundColor: message.sender === "You" ? "#2979FF" : "#424242",
-                    color: message.sender === "You" ? "white" : "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.5rem",
-                    maxWidth: "80%",
-                    wordWrap: "break-word",
+                    margin: "0.5rem 0",
+                    display: "flex",
+                    justifyContent: message.sender === "You" ? "flex-end" : "flex-start",
                   }}
                 >
-                  <p style={{ margin: 0 }}>{message.text}</p>
+                  <div
+                    style={{
+                      maxWidth: "60%",
+                      backgroundColor: message.sender === "You" ? "#1976d2" : "#333",
+                      color: "white",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                    }}
+                  >
+                    <p className="sender" style={{ fontWeight: "bold", margin: 0 }}>
+                      {message.sender}
+                    </p>
+                    <p className="message-text" style={{ margin: 0 }}>
+                      {message.text}
+                    </p>
+                  </div>
                 </div>
               ))}
-              {typing && (
-                <div style={{ alignSelf: "flex-start", color: "gray" }}>
-                  <p style={{ fontStyle: "italic", margin: 0 }}>AI is typing...</p>
-                </div>
-              )}
             </div>
-            <TextField
-              id="outlined-basic"
-              label="Outlined"
-              variant="outlined"
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              value={currentMessage}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="send message"
-                      onClick={sendMessage}
-                      sx={{ color: "#03DAC5" }}
-                    >
-                      <SendIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <div
+              className={`relative w-full ${inputShrink ? "lg:w-[400px]" : "lg:w-[700px]"}`}
+              style={{ position: inputShrink ? "fixed" : "relative", bottom: inputShrink ? "1rem" : "auto", display: "flex", alignItems: "center" }}
+            >
+              <TextField
+                variant="outlined"
+                fullWidth
+                multiline={!inputShrink}
+                rows={inputShrink ? 1 : 10}
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Escribe aquí..."
+                InputProps={{
+                  style: { color: "white" },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <button
+                        onClick={sendMessage}
+                        className="bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2"
+                        style={{
+                          marginLeft: "0.5rem",
+                          padding: "0.5rem 1rem",
+                        }}
+                      >
+                        {loadingButton ? (
+                          <CircularProgress size={24} color="inherit" />
+                        ) : (
+                          "Send"
+                        )}
+                      </button>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </div>
           </div>
         )}
       </Main>

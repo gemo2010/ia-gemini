@@ -19,7 +19,6 @@ function Login() {
           <MicrosoftIcon /> Login with Microsoft
         </button>
         <CustomTextField placeholder="Login with email" fullWidth />
-        <CustomTextField placeholder="Password" fullWidth />
         <a href="/chat" className="py-4 text-white">Go to chat</a>
       </div>
       <div className="mt-auto text-center pb-4">
