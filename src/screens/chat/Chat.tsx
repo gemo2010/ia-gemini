@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -10,6 +10,7 @@ import MailIcon from "@mui/icons-material/Mail";
 import StarIcon from "@mui/icons-material/Star";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
   CircularProgress,
@@ -78,16 +79,20 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   backgroundColor: "#232323",
 }));
 
+interface Message {
+  sender: string;
+  text: string;
+}
+
 const Chat = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [loadingButton, setLoadingButton] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [inputShrink, setInputShrink] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [typingInterval, setTypingInterval] = useState(null);
+  const [typingInterval, setTypingInterval] = useState<NodeJS.Timeout | null>(null);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -118,7 +123,6 @@ const Chat = () => {
     const newMessages = [...messages, { sender: "You", text: currentMessage }];
     setMessages(newMessages);
     setCurrentMessage("");
-    setLoadingButton(true);
     setTyping(true);
 
     try {
@@ -131,18 +135,15 @@ const Chat = () => {
       });
 
       const data = await response.json();
-      console.log('Response from AI:', data.response); // Verifica la respuesta en la consola
+      console.log('Response from AI:', data.response);
       const aiMessage = data.response;
 
-      // Añade la respuesta completa de la IA sin mecanografía
-      setMessages(prevMessages => [...prevMessages, { sender: 'AI', text: aiMessage }]);
+      setMessages((prevMessages) => [...prevMessages, { sender: 'AI', text: aiMessage }]);
       setTyping(false);
     } catch (error) {
       console.error('Error:', error);
       setMessages([...newMessages, { sender: 'AI', text: 'Sorry, something went wrong.' }]);
       setTyping(false);
-    } finally {
-      setLoadingButton(false);
     }
   };
 
@@ -283,126 +284,96 @@ const Chat = () => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           alignItems: "center",
-          minHeight: "100vh",
+          height: "100vh",
+          backgroundColor: "#121212",
         }}
       >
+        <DrawerHeader />
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-              minHeight: "100vh",
-            }}
-          >
-            <CircularProgress />
-          </div>
+          <CircularProgress />
         ) : (
-          <div className="flex justify-center items-center flex-col gap-10 w-full">
-            <div
-              className="chat-messages"
-              id="chat-messages"
-              style={{
-                maxHeight: "60vh",
-                overflowY: "auto",
-                marginBottom: "1rem",
+          <>
+            <Box
+              sx={{
                 width: "100%",
-                backgroundColor: "#121212",
-                color: "white",
-                padding: "1rem",
-                borderRadius: "0.5rem",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                scrollbarColor: "#6b6b6b #2b2b2b", // Colores del scroll
-                scrollbarWidth: "thin", // Ancho del scroll
+                maxWidth: 800,
+                backgroundColor: "#232323",
+                borderRadius: 2,
+                p: 3,
+                boxShadow: 3,
+                overflowY: "auto",
+                maxHeight: "60vh",
               }}
             >
               {messages.map((message, index) => (
-                <div
+                <Typography
                   key={index}
-                  className={`message ${message.sender.toLowerCase()}`}
-                  style={{
-                    margin: "0.5rem 0",
-                    display: "flex",
-                    justifyContent: message.sender === "You" ? "flex-end" : "flex-start",
+                  variant="body1"
+                  gutterBottom
+                  sx={{
+                    backgroundColor: message.sender === "You" ? "#3f51b5" : "#616161",
+                    color: "white",
+                    p: 1,
+                    borderRadius: 2,
                     alignSelf: message.sender === "You" ? "flex-end" : "flex-start",
-                    marginTop: index > 0 ? "1rem" : "0",
+                    maxWidth: "80%",
+                    wordWrap: "break-word",
+                    mt: 1,
                   }}
                 >
-                  <div
-                    style={{
-                      maxWidth: "60%",
-                      backgroundColor: message.sender === "You" ? "#1976d2" : "#333",
-                      color: "white",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "0.5rem",
-                      border: `1px solid ${message.sender === "You" ? "#1976d2" : "#333"}`,
-                      boxShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
-                    }}
-                  >
-                    <p className="message-text" style={{ margin: 0 }}>
-                      {message.text}
-                    </p>
-                  </div>
-                </div>
+                  {message.sender}: {message.text}
+                </Typography>
               ))}
-            </div>
-            <div
-              className={`relative w-full ${inputShrink ? "lg:w-[400px]" : "lg:w-[700px]"}`}
-              style={{ position: inputShrink ? "fixed" : "relative", bottom: inputShrink ? "1rem" : "auto", display: "flex", alignItems: "center" }}
+              {typing && (
+                <Typography
+                  variant="body1"
+                  gutterBottom
+                  sx={{
+                    backgroundColor: "#616161",
+                    color: "white",
+                    p: 1,
+                    borderRadius: 2,
+                    alignSelf: "flex-start",
+                    maxWidth: "80%",
+                    wordWrap: "break-word",
+                    mt: 1,
+                  }}
+                >
+                  AI is typing...
+                </Typography>
+              )}
+            </Box>
+            <Box
+              sx={{
+                mt: 3,
+                width: "100%",
+                maxWidth: 800,
+              }}
             >
               <TextField
-                variant="outlined"
                 fullWidth
-                multiline={!inputShrink}
-                rows={inputShrink ? 1 : 10}
+                variant="outlined"
+                placeholder="Type a message..."
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    e.preventDefault();
                     sendMessage();
                   }
                 }}
-                placeholder="Escribe aquí..."
                 InputProps={{
-                  style: { color: "white" },
                   endAdornment: (
                     <InputAdornment position="end">
-                      {typing ? (
-                        <button
-                          onClick={stopTyping}
-                          className="bg-red-500 hover:bg-transparent transition duration-300 border-2 border-red-500 text-white rounded-md px-4 py-2"
-                          style={{
-                            marginLeft: "0.5rem",
-                            padding: "0.5rem 1rem",
-                          }}
-                        >
-                          Stop
-                        </button>
-                      ) : (
-                        <button
-                          onClick={sendMessage}
-                          className="bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2"
-                          style={{
-                            marginLeft: "0.5rem",
-                            padding: "0.5rem 1rem",
-                          }}
-                        >
-                          Send
-                        </button>
-                      )}
+                      <IconButton onClick={sendMessage}>
+                        <SendIcon />
+                      </IconButton>
                     </InputAdornment>
                   ),
                 }}
               />
-            </div>
-          </div>
+            </Box>
+          </>
         )}
       </Main>
     </Box>
