@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -23,8 +23,9 @@ import {
   ListItemText,
   Toolbar,
   Typography,
+  InputAdornment,
+  TextField,
 } from "@mui/material";
-import { CustomTextField } from "../../components";
 
 const drawerWidth = 200;
 
@@ -61,7 +62,7 @@ const AppBar = styled(MuiAppBar, {
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
-    transition: theme.transitions.create(["margin", "width"], {
+    transition: theme.transitions.create(["margin, width"], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
@@ -77,11 +78,16 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   backgroundColor: "#232323",
 }));
 
-export default function Chat() {
+const Chat = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingButton, setLoadingButton] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [inputShrink, setInputShrink] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [typingInterval, setTypingInterval] = useState(null);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -97,11 +103,47 @@ export default function Chat() {
     }, 1000);
   }, []);
 
-  const handleSendQuestion = () => {
+  const stopTyping = () => {
+    if (typingInterval) {
+      clearInterval(typingInterval);
+      setTypingInterval(null);
+      setTyping(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!currentMessage) return;
+
+    setInputShrink(true);
+    const newMessages = [...messages, { sender: "You", text: currentMessage }];
+    setMessages(newMessages);
+    setCurrentMessage("");
     setLoadingButton(true);
-    setTimeout(() => {
+    setTyping(true);
+
+    try {
+      const response = await fetch('https://us-central1-gemini-chat-14f5d.cloudfunctions.net/geminiChat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: currentMessage })
+      });
+
+      const data = await response.json();
+      console.log('Response from AI:', data.response); // Verifica la respuesta en la consola
+      const aiMessage = data.response;
+
+      // Añade la respuesta completa de la IA sin mecanografía
+      setMessages(prevMessages => [...prevMessages, { sender: 'AI', text: aiMessage }]);
+      setTyping(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages([...newMessages, { sender: 'AI', text: 'Sorry, something went wrong.' }]);
+      setTyping(false);
+    } finally {
       setLoadingButton(false);
-    }, 2000);
+    }
   };
 
   const menuItems = [
@@ -203,7 +245,7 @@ export default function Chat() {
                 >
                   <AccountCircleIcon />
                 </ListItemIcon>
-                <ListItemText primary="User name" sx={{ color: "white" }} />
+                <ListItemText primary="User name" sx={{ color: "white", fontSize: "0.875rem" }} />
               </ListItemButton>
               <ListItemButton
                 href="/"
@@ -240,6 +282,7 @@ export default function Chat() {
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
@@ -259,31 +302,111 @@ export default function Chat() {
           </div>
         ) : (
           <div className="flex justify-center items-center flex-col gap-10 w-full">
-            <p className="text-white text-xl md:text-2xl lg:text-3xl xl:text-5xl 2xl:text-8xl text-center">
-              Ingresa un texto
-            </p>
-            <div className="relative w-full lg:w-[700px]">
-              <CustomTextField
-                rows={10}
-                multiline
+            <div
+              className="chat-messages"
+              id="chat-messages"
+              style={{
+                maxHeight: "60vh",
+                overflowY: "auto",
+                marginBottom: "1rem",
+                width: "100%",
+                backgroundColor: "#121212",
+                color: "white",
+                padding: "1rem",
+                borderRadius: "0.5rem",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                scrollbarColor: "#6b6b6b #2b2b2b", // Colores del scroll
+                scrollbarWidth: "thin", // Ancho del scroll
+              }}
+            >
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`message ${message.sender.toLowerCase()}`}
+                  style={{
+                    margin: "0.5rem 0",
+                    display: "flex",
+                    justifyContent: message.sender === "You" ? "flex-end" : "flex-start",
+                    alignSelf: message.sender === "You" ? "flex-end" : "flex-start",
+                    marginTop: index > 0 ? "1rem" : "0",
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "60%",
+                      backgroundColor: message.sender === "You" ? "#1976d2" : "#333",
+                      color: "white",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      border: `1px solid ${message.sender === "You" ? "#1976d2" : "#333"}`,
+                      boxShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
+                    }}
+                  >
+                    <p className="message-text" style={{ margin: 0 }}>
+                      {message.text}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              className={`relative w-full ${inputShrink ? "lg:w-[400px]" : "lg:w-[700px]"}`}
+              style={{ position: inputShrink ? "fixed" : "relative", bottom: inputShrink ? "1rem" : "auto", display: "flex", alignItems: "center" }}
+            >
+              <TextField
+                variant="outlined"
                 fullWidth
-                className="text-white p-4"
+                multiline={!inputShrink}
+                rows={inputShrink ? 1 : 10}
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 placeholder="Escribe aquí..."
+                InputProps={{
+                  style: { color: "white" },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {typing ? (
+                        <button
+                          onClick={stopTyping}
+                          className="bg-red-500 hover:bg-transparent transition duration-300 border-2 border-red-500 text-white rounded-md px-4 py-2"
+                          style={{
+                            marginLeft: "0.5rem",
+                            padding: "0.5rem 1rem",
+                          }}
+                        >
+                          Stop
+                        </button>
+                      ) : (
+                        <button
+                          onClick={sendMessage}
+                          className="bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2"
+                          style={{
+                            marginLeft: "0.5rem",
+                            padding: "0.5rem 1rem",
+                          }}
+                        >
+                          Send
+                        </button>
+                      )}
+                    </InputAdornment>
+                  ),
+                }}
               />
-              <button
-                onClick={handleSendQuestion}
-                className="absolute bottom-0 right-0 bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2 m-4"
-              >
-                {loadingButton ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  "Send"
-                )}
-              </button>
             </div>
           </div>
         )}
       </Main>
     </Box>
   );
-}
+};
+
+export default Chat;
