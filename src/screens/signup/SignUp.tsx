@@ -47,7 +47,7 @@ export default function SignUp() {
             placeholder="Name"
             fullWidth
             value={form.name}
-            onChange={(e) => handleInputChange(e, "email")}
+            onChange={(e) => handleInputChange(e, "name")}
             InputProps={{ style: { color: "white" } }}
           />
           <CustomTextField
