@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -10,7 +10,6 @@ import MailIcon from "@mui/icons-material/Mail";
 import StarIcon from "@mui/icons-material/Star";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
-import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
   CircularProgress,
@@ -63,7 +62,7 @@ const AppBar = styled(MuiAppBar, {
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
-    transition: theme.transitions.create(["margin, width"], {
+    transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
@@ -79,20 +78,13 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   backgroundColor: "#232323",
 }));
 
-interface Message {
-  sender: string;
-  text: string;
-}
-
 const Chat = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [inputShrink, setInputShrink] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [typingInterval, setTypingInterval] = useState<NodeJS.Timeout | null>(null);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -108,18 +100,9 @@ const Chat = () => {
     }, 1000);
   }, []);
 
-  const stopTyping = () => {
-    if (typingInterval) {
-      clearInterval(typingInterval);
-      setTypingInterval(null);
-      setTyping(false);
-    }
-  };
-
   const sendMessage = async () => {
     if (!currentMessage) return;
 
-    setInputShrink(true);
     const newMessages = [...messages, { sender: "You", text: currentMessage }];
     setMessages(newMessages);
     setCurrentMessage("");
@@ -135,10 +118,9 @@ const Chat = () => {
       });
 
       const data = await response.json();
-      console.log('Response from AI:', data.response);
       const aiMessage = data.response;
 
-      setMessages((prevMessages) => [...prevMessages, { sender: 'AI', text: aiMessage }]);
+      setMessages(prevMessages => [...prevMessages, { sender: 'AI', text: aiMessage }]);
       setTyping(false);
     } catch (error) {
       console.error('Error:', error);
@@ -284,96 +266,86 @@ const Chat = () => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           display: "flex",
           flexDirection: "column",
+          justifyContent: "center",
           alignItems: "center",
-          height: "100vh",
-          backgroundColor: "#121212",
+          minHeight: "100vh",
         }}
       >
-        <DrawerHeader />
         {loading ? (
-          <CircularProgress />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              minHeight: "100vh",
+            }}
+          >
+            <CircularProgress />
+          </div>
         ) : (
-          <>
-            <Box
-              sx={{
-                width: "100%",
-                maxWidth: 800,
-                backgroundColor: "#232323",
-                borderRadius: 2,
-                p: 3,
-                boxShadow: 3,
-                overflowY: "auto",
+          <div className="flex justify-center items-center flex-col gap-10 w-full">
+            <div
+              className="chat-messages"
+              id="chat-messages"
+              style={{
                 maxHeight: "60vh",
+                overflowY: "auto",
+                marginBottom: "1rem",
+                width: "100%",
+                backgroundColor: "#121212",
+                color: "white",
+                padding: "1rem",
+                borderRadius: "0.5rem",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
               }}
             >
               {messages.map((message, index) => (
-                <Typography
+                <div
                   key={index}
-                  variant="body1"
-                  gutterBottom
-                  sx={{
-                    backgroundColor: message.sender === "You" ? "#3f51b5" : "#616161",
-                    color: "white",
-                    p: 1,
-                    borderRadius: 2,
+                  style={{
+                    marginBottom: "0.5rem",
                     alignSelf: message.sender === "You" ? "flex-end" : "flex-start",
+                    backgroundColor: message.sender === "You" ? "#2979FF" : "#424242",
+                    color: message.sender === "You" ? "white" : "white",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.5rem",
                     maxWidth: "80%",
                     wordWrap: "break-word",
-                    mt: 1,
                   }}
                 >
-                  {message.sender}: {message.text}
-                </Typography>
+                  <p style={{ margin: 0 }}>{message.text}</p>
+                </div>
               ))}
               {typing && (
-                <Typography
-                  variant="body1"
-                  gutterBottom
-                  sx={{
-                    backgroundColor: "#616161",
-                    color: "white",
-                    p: 1,
-                    borderRadius: 2,
-                    alignSelf: "flex-start",
-                    maxWidth: "80%",
-                    wordWrap: "break-word",
-                    mt: 1,
-                  }}
-                >
-                  AI is typing...
-                </Typography>
+                <div style={{ alignSelf: "flex-start", color: "gray" }}>
+                  <p style={{ fontStyle: "italic", margin: 0 }}>AI is typing...</p>
+                </div>
               )}
-            </Box>
-            <Box
-              sx={{
-                mt: 3,
-                width: "100%",
-                maxWidth: 800,
+            </div>
+            <TextField
+              id="outlined-basic"
+              label="Outlined"
+              variant="outlined"
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              value={currentMessage}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="send message"
+                      onClick={sendMessage}
+                      sx={{ color: "#03DAC5" }}
+                    >
+                      <SendIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
               }}
-            >
-              <TextField
-                fullWidth
-                variant="outlined"
-                placeholder="Type a message..."
-                value={currentMessage}
-                onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    sendMessage();
-                  }
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={sendMessage}>
-                        <SendIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-          </>
+            />
+          </div>
         )}
       </Main>
     </Box>
