@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -24,8 +24,9 @@ import {
   Toolbar,
   Typography,
   InputAdornment,
-  TextField,
 } from "@mui/material";
+import { CustomTextField } from "../../components";
+import { useNavigate } from "react-router-dom";
 
 const drawerWidth = 200;
 
@@ -78,12 +79,18 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   backgroundColor: "#232323",
 }));
 
+interface Message {
+  sender: string;
+  text: string;
+}
+
 const Chat = () => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingButton, setLoadingButton] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]); // <-- Define el tipo para messages
   const [currentMessage, setCurrentMessage] = useState("");
   const [inputShrink, setInputShrink] = useState(false);
 
@@ -105,33 +112,60 @@ const Chat = () => {
     if (!currentMessage) return;
 
     setInputShrink(true);
-    const newMessages = [...messages, { sender: "You", text: currentMessage }];
+    const newMessages: Message[] = [
+      ...messages,
+      { sender: "You", text: currentMessage },
+    ];
     setMessages(newMessages);
     setCurrentMessage("");
     setLoadingButton(true);
 
     try {
-      const response = await fetch('https://us-central1-gemini-chat-14f5d.cloudfunctions.net/geminiChat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message: currentMessage })
-      });
+      const response = await fetch(
+        "https://us-central1-gemini-chat-14f5d.cloudfunctions.net/geminiChat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message: currentMessage }),
+        }
+      );
 
       const data = await response.json();
-      console.log('Response from AI:', data.response); // Verifica la respuesta en la consola
+      console.log("Response from AI:", data.response);
       const aiMessage = data.response;
 
-      // Añade la respuesta completa de la IA sin mecanografía
-      setMessages(prevMessages => [...prevMessages, { sender: 'AI', text: aiMessage }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: "AI", text: aiMessage },
+      ]);
     } catch (error) {
-      console.error('Error:', error);
-      setMessages([...newMessages, { sender: 'AI', text: 'Sorry, something went wrong.' }]);
+      console.error("Error:", error);
+      setMessages([
+        ...newMessages,
+        { sender: "AI", text: "Sorry, something went wrong." },
+      ]);
     } finally {
       setLoadingButton(false);
     }
   };
+
+  useEffect(() => {
+    window.history.pushState(null, window.location.href);
+
+    window.onpopstate = function () {
+      if (window.location.pathname === "/") {
+        navigate("/");
+      } else {
+        history.go(1);
+      }
+    };
+
+    return () => {
+      window.onpopstate = null;
+    };
+  }, [navigate]);
 
   const menuItems = [
     { name: "Inbox", icon: <InboxIcon /> },
@@ -264,9 +298,9 @@ const Chat = () => {
       </Drawer>
       <Main
         open={open}
+        className="p-8 lg:p-20 w-full"
         sx={{
           flexGrow: 1,
-          p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           display: "flex",
           flexDirection: "column",
@@ -288,22 +322,20 @@ const Chat = () => {
             <CircularProgress />
           </div>
         ) : (
-          <div className="flex justify-center items-center flex-col gap-10 w-full">
+          <>
             <div
               className="chat-messages"
               id="chat-messages"
               style={{
-                maxHeight: "60vh",
-                overflowY: "auto",
                 marginBottom: "1rem",
                 width: "100%",
                 backgroundColor: "#121212",
                 color: "white",
-                padding: "1rem",
                 borderRadius: "0.5rem",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
+                paddingBottom: "5rem", // Added padding to make space for input field
               }}
             >
               {messages.map((message, index) => (
@@ -313,19 +345,24 @@ const Chat = () => {
                   style={{
                     margin: "0.5rem 0",
                     display: "flex",
-                    justifyContent: message.sender === "You" ? "flex-end" : "flex-start",
+                    justifyContent:
+                      message.sender === "You" ? "flex-end" : "flex-start",
                   }}
                 >
                   <div
                     style={{
                       maxWidth: "60%",
-                      backgroundColor: message.sender === "You" ? "#1976d2" : "#333",
+                      backgroundColor:
+                        message.sender === "You" ? "#1976d2" : "#333",
                       color: "white",
                       padding: "0.5rem 1rem",
                       borderRadius: "0.5rem",
                     }}
                   >
-                    <p className="sender" style={{ fontWeight: "bold", margin: 0 }}>
+                    <p
+                      className="sender"
+                      style={{ fontWeight: "bold", margin: 0 }}
+                    >
                       {message.sender}
                     </p>
                     <p className="message-text" style={{ margin: 0 }}>
@@ -335,11 +372,18 @@ const Chat = () => {
                 </div>
               ))}
             </div>
-            <div
-              className={`relative w-full ${inputShrink ? "lg:w-[400px]" : "lg:w-[700px]"}`}
-              style={{ position: inputShrink ? "fixed" : "relative", bottom: inputShrink ? "1rem" : "auto", display: "flex", alignItems: "center" }}
+            <Box
+              sx={{
+                position: "fixed",
+                bottom: 0,
+                left: open ? drawerWidth : 0,
+                width: open ? `calc(100% - ${drawerWidth}px)` : "100%",
+                backgroundColor: "#121212",
+                padding: "1rem",
+                borderTop: "1px solid #333",
+              }}
             >
-              <TextField
+              <CustomTextField
                 variant="outlined"
                 fullWidth
                 multiline={!inputShrink}
@@ -347,7 +391,7 @@ const Chat = () => {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                   }
@@ -359,14 +403,11 @@ const Chat = () => {
                     <InputAdornment position="end">
                       <button
                         onClick={sendMessage}
-                        className="bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2"
-                        style={{
-                          marginLeft: "0.5rem",
-                          padding: "0.5rem 1rem",
-                        }}
+                        className="absolute bottom-0 right-0 bg-blue-500 hover:bg-transparent transition duration-300 border-2 border-blue-500 text-white rounded-md px-4 py-2 mb-[6px] mr-[6px]"
+                        style={{ marginLeft: "1rem" }} // Adjusted margin to reduce space
                       >
                         {loadingButton ? (
-                          <CircularProgress size={24} color="inherit" />
+                          <CircularProgress size={12} color="inherit" />
                         ) : (
                           "Send"
                         )}
@@ -375,8 +416,8 @@ const Chat = () => {
                   ),
                 }}
               />
-            </div>
-          </div>
+            </Box>
+          </>
         )}
       </Main>
     </Box>

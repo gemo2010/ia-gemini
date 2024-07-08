@@ -5,8 +5,14 @@ interface Props {
   placeholder?: string;
   rows?: number;
   multiline?: boolean;
+  type?: string;
   fullWidth?: boolean;
   className?: string;
+  variant?: "standard" | "outlined" | "filled";
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  InputProps?: any;
 }
 
 const CustomTextFieldStyled = styled(TextField)(() => ({
@@ -28,17 +34,24 @@ export const CustomTextField = ({
   rows,
   multiline,
   fullWidth,
+  value,
+  type,
   className,
+  InputProps,
+  variant,
+  onKeyDown,
+  onChange,
   ...props
 }: Props) => {
   return (
     <CustomTextFieldStyled
-      InputProps={{
-        style: {
-          color: "white",
-        },
-      }}
+      variant={variant}
+      InputProps={InputProps}
       placeholder={placeholder}
+      value={value}
+      type={type}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
       rows={rows}
       multiline={multiline}
       fullWidth={fullWidth}
