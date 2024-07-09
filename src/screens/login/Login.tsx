@@ -2,8 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import firebase from "../../fireBaseConfig";
-import { GoogleAuthProvider } from "firebase/auth";
-import "firebase/firestore";
+import {
+  GoogleAuthProvider,
+  getAuth,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { CustomTextField } from "../../components";
 
 export default function SignUp() {
@@ -14,6 +18,7 @@ export default function SignUp() {
   });
 
   const googleProvider = new GoogleAuthProvider();
+  const auth = getAuth(firebase);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -25,27 +30,31 @@ export default function SignUp() {
 
   const onClickSignInWithGoogle = async () => {
     try {
-      const result = await firebase.auth().signInWithPopup(googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       if (result) {
-        alert("User logged successfully");
+        alert("User logged in successfully");
         navigate("/chat");
       }
     } catch (error) {
-      alert("Error to login with google");
+      alert("Error logging in with Google");
+      console.error("Google Sign-In Error:", error);
     }
   };
 
   const onClickSignIn = async () => {
     try {
-      const user = await firebase
-        .auth()
-        .signInWithEmailAndPassword(form.email, form.password);
+      const user = await signInWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
       if (user) {
-        alert("User logged successfully");
+        alert("User logged in successfully");
         navigate("/chat");
       }
     } catch (error) {
-      alert("Error to login user");
+      alert("Error logging in user");
+      console.error("Email/Password Sign-In Error:", error);
     }
   };
 
@@ -61,7 +70,7 @@ export default function SignUp() {
         <div className="flex flex-col items-center gap-4 w-full">
           <button
             type="button"
-            className="w-full py-3 text-md lg:text-lg 2xl:text-2xl bg-[#393939] transtition hover:bg-transparent border border-[#393939] hover:border-white duration-300 ease-in-out text-white flex justify-center items-center gap-4 rounded-md"
+            className="w-full py-3 text-md lg:text-lg 2xl:text-2xl bg-[#393939] transition hover:bg-transparent border border-[#393939] hover:border-white duration-300 ease-in-out text-white flex justify-center items-center gap-4 rounded-md"
             onClick={onClickSignInWithGoogle}
           >
             <GoogleIcon /> Login with Google
@@ -90,7 +99,7 @@ export default function SignUp() {
           <p className="text-white">
             You don't have an account?{" "}
             <a href="/signup" className="py-4 text-white">
-              <p className="text-blue-500 inline underline">Sign up</p>
+              <span className="text-blue-500 inline underline">Sign up</span>
             </a>
           </p>
         </div>

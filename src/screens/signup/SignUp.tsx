@@ -74,7 +74,7 @@ export default function SignUp() {
           <p className="text-white">
             Go back to{" "}
             <a href="/" className="py-4 text-white">
-              <p className="text-blue-500 inline underline">Login</p>
+              <span className="text-blue-500 inline underline">Login</span>
             </a>
           </p>
         </div>
